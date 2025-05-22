@@ -4,9 +4,11 @@ idna==3.10
 markdown-it-py==3.0.0
 mdurl==0.1.2
 oauthlib==3.2.2
+pillow==10.4.0
 Pygments==2.19.1
 requests==2.32.3
 requests-oauthlib==2.0.0
 rich==14.0.0
+ttkbootstrap==1.13.8
 typing_extensions==4.13.2
 urllib3==2.4.0
