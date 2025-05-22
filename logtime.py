@@ -112,6 +112,14 @@ def calc_hours(time_data):
 
     return total_time.total_seconds() / 60
 
+def get_message(total_hours):
+    message = ""
+    if total_hours >= 130 and total_hours < 150:
+        message = "Touch some grass"
+    elif total_hours >= 150:
+        message = "Bro, have a life"
+    return message
+
 
 def display_gui(login, begin, end, total_minutes):
 
@@ -160,7 +168,8 @@ def display_gui(login, begin, end, total_minutes):
     progress_frame.grid(row=4, column=0, sticky="nsew", pady=5)
     progress_frame.columnconfigure(0, weight=1)
 
-    percent = min((total_minutes / (MAX_HOURS * 60)) * 100, 100)
+    percent = (total_minutes / (MAX_HOURS * 60)) * 100
+    message = get_message(total_hours)
 
     progress = ttk.Progressbar(
         progress_frame,
@@ -173,7 +182,7 @@ def display_gui(login, begin, end, total_minutes):
 
     percent_label = ttk.Label(
         progress_frame,
-        text=f"{percent:.1f}%",
+        text=f"{percent:.1f}% {message}",
         font=("Helvetica", 12, "bold"),
         foreground="#4caf50",
     )
@@ -185,9 +194,10 @@ def display_gui(login, begin, end, total_minutes):
         total_hours = total_minutes // 60
         minutes = total_minutes % 60
         hours_value.config(text=f"{total_hours:02.0f}:{minutes:02.0f}")
-        percent = min((total_minutes / (MAX_HOURS * 60)) * 100, 100)
+        message = get_message(total_hours)
+        percent = (total_minutes / (MAX_HOURS * 60)) * 100
         progress.config(value=percent)
-        percent_label.config(text=f"{percent:.1f}%")
+        percent_label.config(text=f"{percent:.1f}% {message}")
         root.after(MINUTES_UPDATE * 60000, update_display)
 
     root.after(MINUTES_UPDATE * 60000, update_display)
