@@ -1,0 +1,7 @@
+UID = "YOUR_UID_HERE"
+SECRET = "YOUR_SECRET_HERE"
+
+TIMEZONE = "Africa/Casablanca"
+API_BASE_URL = "https://api.intra.42.fr/v2"
+MAX_HOURS = 120
+MINUTES_UPDATE = 1

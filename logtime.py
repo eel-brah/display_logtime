@@ -1,44 +1,40 @@
 import argparse
 import sys
 import time
-import tkinter as tk
 from datetime import datetime, timedelta
 
 import ttkbootstrap as ttk
-from oauthlib.oauth2 import BackendApplicationClient
+from oauthlib import oauth2
 from requests_oauthlib import OAuth2Session
 from rich.console import Console
-from rich.progress import BarColumn, Progress, TextColumn, TimeRemainingColumn
+from rich.progress import BarColumn, Progress, TextColumn
 
-UID = "u-s4t2ud-29991113c05adf4f3bfcccaeec2ee454c26836788f9f0a2a3e84329627c4a496"
-SECRET = "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"
-
-TIMEZONE = "Africa/Casablanca"
-API_BASE_URL = "https://api.intra.42.fr/v2"
-MAX_HOURS = 120
+from conf import API_BASE_URL, MAX_HOURS, MINUTES_UPDATE, SECRET, TIMEZONE, UID
 
 
 def fetch_logtime(login, begin_at, end_at):
-    client = BackendApplicationClient(client_id=UID)
-    oauth = OAuth2Session(client=client)
-    token = oauth.fetch_token(
-        token_url=f"{API_BASE_URL}/oauth/token", client_id=UID, client_secret=SECRET
-    )
+    try:
+        client = oauth2.BackendApplicationClient(client_id=UID)
+        oauth = OAuth2Session(client=client)
+        oauth.fetch_token(
+            token_url=f"{API_BASE_URL}/oauth/token", client_id=UID, client_secret=SECRET
+        )
+    except oauth2.rfc6749.errors.InvalidClientError:
+        print("OAuth2 authentication failed due to invalid client credentials")
+        print("Check UID and SECRET")
 
     begin_str = begin_at.isoformat() + "Z"
     end_at = end_at + timedelta(days=1)
     end_str = end_at.isoformat() + "Z"
 
-    user_url = f"https://api.intra.42.fr/v2/users/{login}"
-    user_resp = oauth.get(user_url)
-    if user_resp.status_code != 200:
-        print(f"Invalid user {login}")
-        sys.exit(1)
-
     try:
         stats_url = f"{API_BASE_URL}/users/{login}/locations_stats"
         params = {"begin_at": begin_str, "end_at": end_str, "time_zone": TIMEZONE}
         stats_resp = oauth.get(stats_url, params=params)
+
+        if stats_resp.status_code != 200:
+            print(f"Invalid user {login}")
+            sys.exit(1)
         return stats_resp.json()
     except Exception as e:
         print(f"API request failed: {str(e)}")
@@ -78,17 +74,19 @@ def get_date(begin, end):
     return begin, end
 
 
-def display_progress(total_hours, begin, end):
+def display_progress(total_minutes, begin, end):
     console = Console()
     console.print(
         f"[bold cyan]From: {begin.strftime('%Y-%m-%d')}  -  To: {end.strftime('%Y-%m-%d')}[/]"
     )
 
+    total_hours = total_minutes // 60
+    minutes = total_minutes % 60
     with Progress(
         TextColumn("[bold cyan]Total Hours:[/]"),
         BarColumn(bar_width=40),
         TextColumn("[progress.percentage]{task.percentage:>3.0f}%"),
-        TextColumn(f"[bold green]{total_hours:.2f}h"),
+        TextColumn(f"[bold green]{total_hours:02.0f}:{minutes:02.0f}"),
         transient=False,
         console=console,
     ) as progress:
@@ -112,14 +110,15 @@ def calc_hours(time_data):
         )
         total_time += duration
 
-    return total_time.total_seconds() / 3600
+    return total_time.total_seconds() / 60
 
 
-def display_gui(login, begin, end, total_hours):
+def display_gui(login, begin, end, total_minutes):
+
     root = ttk.Window(themename="darkly")
     root.title("Logtime")
     root.geometry("450x250")
-    root.resizable(False, False)
+    root.maxsize(450, 250)
 
     root.columnconfigure(0, weight=1)
     root.rowconfigure(0, weight=1)
@@ -128,8 +127,10 @@ def display_gui(login, begin, end, total_hours):
     main_frame.grid(row=0, column=0, sticky="nsew")
 
     main_frame.columnconfigure(0, weight=1)
-    for i in range(5):
-        main_frame.rowconfigure(i, weight=1)
+    main_frame.rowconfigure(0, weight=1)
+    main_frame.rowconfigure(1, weight=1)
+    main_frame.rowconfigure(3, weight=1)
+    main_frame.rowconfigure(4, weight=1)
 
     title_label = ttk.Label(
         main_frame,
@@ -145,46 +146,51 @@ def display_gui(login, begin, end, total_hours):
     )
     date_value.grid(row=1, column=0, pady=8)
 
+    total_hours = total_minutes // 60
+    minutes = total_minutes % 60
     hours_value = ttk.Label(
         main_frame,
-        text=f"{total_hours:.2f}",
+        text=f"{total_hours:02.0f}:{minutes:02.0f}",
         font=("Helvetica", 32, "bold"),
         foreground="#4caf50",
     )
     hours_value.grid(row=2, column=0, pady=(10, 15))
 
     progress_frame = ttk.Frame(main_frame)
-    progress_frame.grid(row=4, column=0, sticky="nsew", pady=10)
+    progress_frame.grid(row=4, column=0, sticky="nsew", pady=5)
     progress_frame.columnconfigure(0, weight=1)
 
-    inner_progress_frame = ttk.Frame(progress_frame)
-    inner_progress_frame.grid(row=0, column=0)
-
-    percent = min((total_hours / MAX_HOURS) * 100, 100)
-
-    style = ttk.Style()
-    style.configure(
-        "custom.Horizontal.TProgressbar", troughcolor="#424242", background="#4caf50"
-    )
+    percent = min((total_minutes / (MAX_HOURS * 60)) * 100, 100)
 
     progress = ttk.Progressbar(
-        inner_progress_frame,
-        style="custom.Horizontal.TProgressbar",
+        progress_frame,
+        bootstyle="success-striped",
         value=f"{percent:.1f}",
-        maximum=MAX_HOURS,
+        maximum=100,
         length=300,
-        mode="determinate",
     )
     progress.grid(row=0, column=0, pady=5)
 
     percent_label = ttk.Label(
-        inner_progress_frame,
+        progress_frame,
         text=f"{percent:.1f}%",
         font=("Helvetica", 12, "bold"),
         foreground="#4caf50",
     )
     percent_label.grid(row=1, column=0)
 
+    def update_display():
+        nonlocal total_minutes
+        total_minutes += MINUTES_UPDATE
+        total_hours = total_minutes // 60
+        minutes = total_minutes % 60
+        hours_value.config(text=f"{total_hours:02.0f}:{minutes:02.0f}")
+        percent = min((total_minutes / (MAX_HOURS * 60)) * 100, 100)
+        progress.config(value=percent)
+        percent_label.config(text=f"{percent:.1f}%")
+        root.after(MINUTES_UPDATE * 60000, update_display)
+
+    root.after(MINUTES_UPDATE * 60000, update_display)
     try:
         root.mainloop()
     except KeyboardInterrupt:
@@ -216,11 +222,11 @@ def main():
     begin, end = get_date(args.begin_date, args.end_date)
     time_data = fetch_logtime(args.login, begin, end)
 
-    total_hours = calc_hours(time_data)
+    total_minutes = calc_hours(time_data)
     if args.g:
-        display_gui(args.login, begin, end, total_hours)
+        display_gui(args.login, begin, end, total_minutes)
     else:
-        display_progress(total_hours, begin, end)
+        display_progress(total_minutes, begin, end)
 
 
 if __name__ == "__main__":
