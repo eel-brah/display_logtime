@@ -115,7 +115,7 @@ def calc_hours(time_data):
 
 
 def get_message(total_hours):
-    message = ""
+    message = f"{days_to_28()} day(s) left"
     if total_hours >= 130 and total_hours < 150:
         message = "Touch some grass"
     elif total_hours >= 150:
@@ -187,7 +187,7 @@ def display_gui(login, begin, end):
 
     days_left = ttk.Label(
         main_frame,
-        text=f"{days_to_28()} day(s) left",
+        text="Loading...",
         font=("Helvetica", 12, "bold"),
         foreground="#bfaf40",
     )
@@ -220,8 +220,9 @@ def display_gui(login, begin, end):
         hours_value.config(text=f"{total_hours:02.0f}:{minutes:02.0f}")
         percent = (total_minutes / (MAX_HOURS * 60)) * 100
         message = get_message(total_hours)
+        days_left.config(text=f"{message}")
         progress.config(value=percent)
-        percent_label.config(text=f"{percent:.1f}% {message}")
+        percent_label.config(text=f"{percent:.1f}%")
 
     def update_display():
         nonlocal total_minutes
@@ -236,7 +237,7 @@ def display_gui(login, begin, end):
             messagebox.showerror("Error", f"Failed to fetch logtime data for {login}.")
             root.destroy()
             return
-        total_minutes = calc_hours(time_data)
+        total_minutes = round(calc_hours(time_data))
         update_gui_display()
 
     root.after(100, get_total_minutes)
@@ -278,7 +279,7 @@ def main():
         time_data = fetch_logtime(args.login, begin, end)
         if time_data is None:
             sys.exit(1)
-        total_minutes = calc_hours(time_data)
+        total_minutes = round(calc_hours(time_data))
         display_progress(total_minutes, begin, end)
 
 
