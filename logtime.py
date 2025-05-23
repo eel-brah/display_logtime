@@ -207,7 +207,7 @@ def display_gui(login, begin, end):
             messagebox.showerror("Error", f"Failed to fetch logtime data for {login}.")
             root.destroy()
             return
-        total_minutes = calc_hours(time_data) + MINUTES_UPDATE
+        total_minutes = calc_hours(time_data) 
         update_gui_display()
 
     root.after(100, get_total_minutes)
