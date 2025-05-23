@@ -2,6 +2,7 @@ import argparse
 import sys
 import time
 from datetime import datetime, timedelta
+from tkinter import messagebox
 
 import ttkbootstrap as ttk
 from oauthlib import oauth2
@@ -33,12 +34,12 @@ def fetch_logtime(login, begin_at, end_at):
         stats_resp = oauth.get(stats_url, params=params)
 
         if stats_resp.status_code != 200:
-            print(f"Invalid user {login}")
-            sys.exit(1)
+            print(f"Error: Invalid login '{login}'")
+            return None
         return stats_resp.json()
     except Exception as e:
         print(f"API request failed: {str(e)}")
-        sys.exit(1)
+        return None
 
 
 def get_date(begin, end):
@@ -112,6 +113,7 @@ def calc_hours(time_data):
 
     return total_time.total_seconds() / 60
 
+
 def get_message(total_hours):
     message = ""
     if total_hours >= 130 and total_hours < 150:
@@ -121,8 +123,7 @@ def get_message(total_hours):
     return message
 
 
-def display_gui(login, begin, end, total_minutes):
-
+def display_gui(login, begin, end):
     root = ttk.Window(themename="darkly")
     root.title("Logtime")
     root.geometry("450x250")
@@ -154,11 +155,10 @@ def display_gui(login, begin, end, total_minutes):
     )
     date_value.grid(row=1, column=0, pady=8)
 
-    total_hours = total_minutes // 60
-    minutes = total_minutes % 60
+    total_minutes = 0
     hours_value = ttk.Label(
         main_frame,
-        text=f"{total_hours:02.0f}:{minutes:02.0f}",
+        text="Loading...",
         font=("Helvetica", 32, "bold"),
         foreground="#4caf50",
     )
@@ -168,13 +168,10 @@ def display_gui(login, begin, end, total_minutes):
     progress_frame.grid(row=4, column=0, sticky="nsew", pady=5)
     progress_frame.columnconfigure(0, weight=1)
 
-    percent = (total_minutes / (MAX_HOURS * 60)) * 100
-    message = get_message(total_hours)
-
     progress = ttk.Progressbar(
         progress_frame,
         bootstyle="success-striped",
-        value=f"{percent:.1f}",
+        value=0,
         maximum=100,
         length=300,
     )
@@ -182,25 +179,40 @@ def display_gui(login, begin, end, total_minutes):
 
     percent_label = ttk.Label(
         progress_frame,
-        text=f"{percent:.1f}% {message}",
+        text="0%",
         font=("Helvetica", 12, "bold"),
         foreground="#4caf50",
     )
     percent_label.grid(row=1, column=0)
 
-    def update_display():
-        nonlocal total_minutes
-        total_minutes += MINUTES_UPDATE
+    def update_gui_display():
         total_hours = total_minutes // 60
         minutes = total_minutes % 60
         hours_value.config(text=f"{total_hours:02.0f}:{minutes:02.0f}")
-        message = get_message(total_hours)
         percent = (total_minutes / (MAX_HOURS * 60)) * 100
+        message = get_message(total_hours)
         progress.config(value=percent)
         percent_label.config(text=f"{percent:.1f}% {message}")
+
+    def update_display():
+        nonlocal total_minutes
+        total_minutes += MINUTES_UPDATE
+        update_gui_display()
         root.after(MINUTES_UPDATE * 60000, update_display)
 
+    def get_total_minutes():
+        nonlocal total_minutes
+        time_data = fetch_logtime(login, begin, end)
+        if time_data is None:
+            messagebox.showerror("Error", f"Failed to fetch logtime data for {login}.")
+            root.destroy()
+            return
+        total_minutes = calc_hours(time_data) + MINUTES_UPDATE
+        update_gui_display()
+
+    root.after(100, get_total_minutes)
     root.after(MINUTES_UPDATE * 60000, update_display)
+
     try:
         root.mainloop()
     except KeyboardInterrupt:
@@ -230,12 +242,14 @@ def main():
     args = parser.parse_args()
 
     begin, end = get_date(args.begin_date, args.end_date)
-    time_data = fetch_logtime(args.login, begin, end)
 
-    total_minutes = calc_hours(time_data)
     if args.g:
-        display_gui(args.login, begin, end, total_minutes)
+        display_gui(args.login, begin, end)
     else:
+        time_data = fetch_logtime(args.login, begin, end)
+        if time_data is None:
+            sys.exit(1)
+        total_minutes = calc_hours(time_data)
         display_progress(total_minutes, begin, end)
 
 
