@@ -122,6 +122,27 @@ def get_message(total_hours):
         message = "Bro, have a life"
     return message
 
+def days_to_28():
+    today = datetime.today()
+    year = today.year
+    month = today.month
+
+    day_28_this_month = datetime(year, month, 28)
+
+    if today <= day_28_this_month:
+        delta = day_28_this_month - today
+        return delta.days
+    else:
+        if month == 12:
+            next_month = 1
+            next_year = year + 1
+        else:
+            next_month = month + 1
+            next_year = year
+
+        day_28_next_month = datetime(next_year, next_month, 28)
+        delta = day_28_next_month - today
+        return delta.days
 
 def display_gui(login, begin, end):
     root = ttk.Window(themename="darkly")
@@ -162,7 +183,15 @@ def display_gui(login, begin, end):
         font=("Helvetica", 32, "bold"),
         foreground="#4caf50",
     )
-    hours_value.grid(row=2, column=0, pady=(10, 15))
+    hours_value.grid(row=2, column=0, pady=(10, 10))
+
+    days_left = ttk.Label(
+        main_frame,
+        text=f"{days_to_28()} day(s) left",
+        font=("Helvetica", 12, "bold"),
+        foreground="#bfaf40",
+    )
+    days_left.grid(row=3, column=0, pady=(0, 0))
 
     progress_frame = ttk.Frame(main_frame)
     progress_frame.grid(row=4, column=0, sticky="nsew", pady=5)
@@ -207,7 +236,7 @@ def display_gui(login, begin, end):
             messagebox.showerror("Error", f"Failed to fetch logtime data for {login}.")
             root.destroy()
             return
-        total_minutes = calc_hours(time_data) 
+        total_minutes = calc_hours(time_data)
         update_gui_display()
 
     root.after(100, get_total_minutes)
