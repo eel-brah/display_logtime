@@ -44,7 +44,7 @@ UID = "YOUR_UID_HERE"
 SECRET = "YOUR_SECRET_HERE"
 ```
 
-To get your UID and SECRET, go to (42 Intra OAuth Applications)[https://profile.intra.42.fr/oauth/applications] and click "Register a new application".
+To get your UID and SECRET, go to [42 Intra OAuth Applications](https://profile.intra.42.fr/oauth/applications) and click "Register a new application".
 
 Fill in the Name and Redirect URI with any valid values, then submit.
 Copy the generated UID and SECRET and paste them into conf.py.
