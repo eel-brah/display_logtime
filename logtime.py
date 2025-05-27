@@ -100,7 +100,7 @@ def display_progress(total_minutes, begin, end):
             time.sleep(0.01)
 
 
-def calc_hours(time_data):
+def calc_total_minutes(time_data, end):
     total_time = timedelta()
 
     for time_str in time_data.values():
@@ -111,15 +111,29 @@ def calc_hours(time_data):
         )
         total_time += duration
 
-    return total_time.total_seconds() / 60
+    try:
+        last_day = time_data[end.strftime("%Y-%m-%d")]
+        h, m, s = last_day.split(":")
+        sec, micro = s.split(".")
+        last_day_duration = timedelta(
+            hours=int(h), minutes=int(m), seconds=int(sec), microseconds=int(micro)
+        )
+        return total_time.total_seconds() // 60 - (3 * 60), last_day_duration.total_seconds() // 60
+    except Exception:
+        return total_time.total_seconds() // 60 - (3 * 60),0
 
 
 def get_message(total_hours):
-    message = f"{days_to_28()} day(s) left"
-    if total_hours >= 130 and total_hours < 150:
-        message = "Touch some grass"
-    elif total_hours >= 150:
+    if total_hours >= 120:
+        message = "Done"
+    elif total_hours >= 130 and total_hours <= 160:
+        message = "Bro, go touch some grass"
+    elif total_hours > 160:
         message = "Bro, have a life"
+    else:
+        to_28 = days_to_28()
+        remain = (MAX_HOURS - total_hours) / max(to_28, 1)
+        message = f"{to_28} day(s) left - {remain:.0f}h per day"
     return message
 
 def days_to_28():
@@ -161,6 +175,7 @@ def display_gui(login, begin, end):
     main_frame.rowconfigure(1, weight=1)
     main_frame.rowconfigure(3, weight=1)
     main_frame.rowconfigure(4, weight=1)
+    main_frame.rowconfigure(5, weight=1)
 
     title_label = ttk.Label(
         main_frame,
@@ -183,7 +198,16 @@ def display_gui(login, begin, end):
         font=("Helvetica", 32, "bold"),
         foreground="#4caf50",
     )
-    hours_value.grid(row=2, column=0, pady=(10, 10))
+    hours_value.grid(row=2, column=0, pady=(0, 0))
+
+    last_day = 0
+    last_day_hours = ttk.Label(
+        main_frame,
+        text="Loading...",
+        font=("Helvetica", 12, "bold"),
+        foreground="#4caf50",
+    )
+    last_day_hours.grid(row=3, column=0, pady=(0, 10))
 
     days_left = ttk.Label(
         main_frame,
@@ -191,10 +215,10 @@ def display_gui(login, begin, end):
         font=("Helvetica", 12, "bold"),
         foreground="#bfaf40",
     )
-    days_left.grid(row=3, column=0, pady=(0, 0))
+    days_left.grid(row=4, column=0)
 
     progress_frame = ttk.Frame(main_frame)
-    progress_frame.grid(row=4, column=0, sticky="nsew", pady=5)
+    progress_frame.grid(row=5, column=0, sticky="nsew", pady=5)
     progress_frame.columnconfigure(0, weight=1)
 
     progress = ttk.Progressbar(
@@ -218,6 +242,11 @@ def display_gui(login, begin, end):
         total_hours = total_minutes // 60
         minutes = total_minutes % 60
         hours_value.config(text=f"{total_hours:02.0f}:{minutes:02.0f}")
+
+        last_day_total_hours = last_day // 60
+        last_day_minutes = last_day % 60
+        last_day_hours.config(text=f"Today: {last_day_total_hours:02.0f}:{last_day_minutes:02.0f}")
+
         percent = (total_minutes / (MAX_HOURS * 60)) * 100
         message = get_message(total_hours)
         days_left.config(text=f"{message}")
@@ -226,18 +255,21 @@ def display_gui(login, begin, end):
 
     def update_display():
         nonlocal total_minutes
+        nonlocal last_day
         total_minutes += MINUTES_UPDATE
+        last_day += MINUTES_UPDATE
         update_gui_display()
         root.after(MINUTES_UPDATE * 60000, update_display)
 
     def get_total_minutes():
         nonlocal total_minutes
+        nonlocal last_day
         time_data = fetch_logtime(login, begin, end)
         if time_data is None:
             messagebox.showerror("Error", f"Failed to fetch logtime data for {login}.")
             root.destroy()
             return
-        total_minutes = round(calc_hours(time_data))
+        total_minutes, last_day = calc_total_minutes(time_data, end)
         update_gui_display()
 
     root.after(100, get_total_minutes)
@@ -279,7 +311,7 @@ def main():
         time_data = fetch_logtime(args.login, begin, end)
         if time_data is None:
             sys.exit(1)
-        total_minutes = round(calc_hours(time_data))
+        total_minutes, _ = calc_total_minutes(time_data, end)
         display_progress(total_minutes, begin, end)
 
 
