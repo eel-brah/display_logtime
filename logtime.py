@@ -47,7 +47,7 @@ def get_date(begin, end):
         now = datetime.utcnow()
 
         if now.day >= 28 and not begin:
-            begin = datetime(now.year, now.month, 28)
+            begin = str(datetime(now.year, now.month, 28))
 
         if not begin:
             prev_month = now.month - 1 if now.month > 1 else 12
@@ -118,9 +118,9 @@ def calc_total_minutes(time_data, end):
         last_day_duration = timedelta(
             hours=int(h), minutes=int(m), seconds=int(sec), microseconds=int(micro)
         )
-        return total_time.total_seconds() // 60 - (3 * 60), last_day_duration.total_seconds() // 60
+        return total_time.total_seconds() // 60 , last_day_duration.total_seconds() // 60
     except Exception:
-        return total_time.total_seconds() // 60 - (3 * 60),0
+        return total_time.total_seconds() // 60 ,0
 
 
 def get_message(total_hours):
