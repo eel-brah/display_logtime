@@ -53,8 +53,10 @@ For a more convenient experience, consider adding a custom shortcut.
 Go to your system settings and add a shortcut that runs:
 
 ```bash
-~/.local/bin/display_logtime/mvenv/bin/activate/python3  ~/.local/bin/display_logtime/logtime.py YOUR_LOGIN -g
+/home/$USER/.local/bin/display_logtime/mvenv/bin/python3  /home/$USER/.local/bin/display_logtime/logtime.py YOUR_LOGIN -g
 ```
+
+!Note: Replace $USER with your actual username, as some systems do not expand environment variables when using keyboard shortcuts.
 
 
 ## 📝 Usage
